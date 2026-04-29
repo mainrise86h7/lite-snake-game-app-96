@@ -1,2 +1,13 @@
-# lite-snake-game-app-96
-A simple snake game project
+# Snake Game
+
+Classic snake game in Python using curses.
+
+✌️ Peace, love & code
+
+## Run
+
+```
+python snake.py
+```
+
+Use arrow keys to move. Press 'q' to quit.
