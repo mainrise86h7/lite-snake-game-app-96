@@ -1,12 +1,21 @@
 import curses
 import random
+import argparse
+
+DIFFICULTIES = {
+    "easy": 150,
+    "medium": 100,
+    "hard": 60,
+    "insane": 30,
+}
 
 class SnakeGame:
-    def __init__(self, stdscr):
+    def __init__(self, stdscr, speed=100, wrap=False):
         self.stdscr = stdscr
         self.h, self.w = stdscr.getmaxyx()
         self.score = 0
-        self.speed = 100
+        self.speed = speed
+        self.wrap = wrap
         self.snake = [(self.h // 2, self.w // 4 + i) for i in range(3)]
         self.direction = curses.KEY_RIGHT
         self.food = self._place_food()
@@ -43,13 +52,14 @@ class SnakeGame:
         dy, dx = moves[self.direction]
         new_head = (head[0] + dy, head[1] + dx)
 
-        # Wall collision
-        if (new_head[0] <= 0 or new_head[0] >= self.h - 1 or
-            new_head[1] <= 0 or new_head[1] >= self.w - 1):
-            self.game_over = True
-            return
+        if self.wrap:
+            new_head = (new_head[0] % (self.h - 1) or 1, new_head[1] % (self.w - 1) or 1)
+        else:
+            if (new_head[0] <= 0 or new_head[0] >= self.h - 1 or
+                new_head[1] <= 0 or new_head[1] >= self.w - 1):
+                self.game_over = True
+                return
 
-        # Self collision
         if new_head in self.snake:
             self.game_over = True
             return
@@ -59,8 +69,7 @@ class SnakeGame:
         if new_head == self.food:
             self.score += 1
             self.food = self._place_food()
-            # Speed up slightly
-            self.speed = max(50, self.speed - 2)
+            self.speed = max(30, self.speed - 2)
             self.stdscr.timeout(self.speed)
         else:
             tail = self.snake.pop(0)
@@ -72,7 +81,7 @@ class SnakeGame:
         head = self.snake[-1]
         self.stdscr.addch(head[0], head[1], "@")
         self.stdscr.addch(self.food[0], self.food[1], "o")
-        self.stdscr.addstr(0, 2, f" Score: {self.score} | Speed: {100 - self.speed + 50} ")
+        self.stdscr.addstr(0, 2, f" Score: {self.score} | Len: {len(self.snake)} ")
 
     def show_game_over(self):
         msg = f"GAME OVER! Score: {self.score}"
@@ -85,8 +94,6 @@ class SnakeGame:
         curses.curs_set(0)
         self.stdscr.nodelay(1)
         self.stdscr.timeout(self.speed)
-
-        # Draw initial food
         self.stdscr.addch(self.food[0], self.food[1], "o")
 
         while not self.game_over:
@@ -99,8 +106,17 @@ class SnakeGame:
         self.show_game_over()
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Snake Game")
+    parser.add_argument("-d", "--difficulty", choices=DIFFICULTIES.keys(), default="medium")
+    parser.add_argument("--wrap", action="store_true", help="Wrap around edges")
+    return parser.parse_args()
+
+
 def main(stdscr):
-    game = SnakeGame(stdscr)
+    args = parse_args()
+    speed = DIFFICULTIES[args.difficulty]
+    game = SnakeGame(stdscr, speed=speed, wrap=args.wrap)
     game.run()
 
 if __name__ == "__main__":
